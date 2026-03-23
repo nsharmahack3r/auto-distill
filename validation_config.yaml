@@ -1,0 +1,8 @@
+# validation_config.yaml
+path: F:\dev\school\dissertation\dataset\datasetv7 # <--- Root folder of your real data
+train: val/images
+val: val/images
+test: val/images
+
+nc: 3 # change if you have more classes
+names: ["rhino", "zebra", "leopard"]

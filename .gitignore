@@ -1,0 +1,10 @@
+*.pt
+.env
+__pycache__
+experiment_workspace
+groundingdino
+results
+results_yolov8n
+runs
+*.pth
+*.png
