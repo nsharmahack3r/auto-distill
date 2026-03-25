@@ -19,7 +19,8 @@ from notify import notify, notify_fail
 
 EXPERIMENT_ROOT  = "experiment_workspace"
 VALIDATION_YAML  = "validation_config.yaml"
-CLASS_NAMES      = ["rhino", "zebra", "leopard"]
+# CLASS_NAMES      = ["rhino", "zebra", "leopard"]
+CLASS_NAMES      = ["zebra"]
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

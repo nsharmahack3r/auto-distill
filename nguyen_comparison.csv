@@ -1,0 +1,17 @@
+Method,Round,Model_Path,mAP_50,mAP_50_95,mAP50_zebra,mAP50_rhino,mAP50_leopard,per_class_status
+Nguyen Method 2 (Unc-Div),0,nguyen_workspace/method2/models\student_round_0\weights\best.pt,0.7590833703801693,0.5965034571576359,0.5965034571576359,,,ok
+Nguyen Method 2 (Unc-Div),1,nguyen_workspace/method2/models\student_round_1\weights\best.pt,0.8547820195364254,0.6448826756910723,0.6448826756910723,,,ok
+Nguyen Method 2 (Unc-Div),2,nguyen_workspace/method2/models\student_round_2\weights\best.pt,0.880424872789704,0.6648123712040633,0.6648123712040633,,,ok
+Nguyen Method 2 (Unc-Div),3,nguyen_workspace/method2/models\student_round_3\weights\best.pt,0.8709353640120256,0.6661196240448348,0.6661196240448348,,,ok
+Nguyen Method 2 (Unc-Div),4,nguyen_workspace/method2/models\student_round_4\weights\best.pt,0.9154509550077528,0.700740389432246,0.700740389432246,,,ok
+Nguyen Method 2 (Unc-Div),5,nguyen_workspace/method2/models\student_round_5\weights\best.pt,0.8991832641231083,0.7064210662926682,0.7064210662926682,,,ok
+Nguyen Method 2 (Unc-Div),6,nguyen_workspace/method2/models\student_round_6\weights\best.pt,0.89492320182527,0.7006253190503968,0.7006253190503968,,,ok
+Nguyen Method 2 (Unc-Div),7,nguyen_workspace/method2/models\student_round_7\weights\best.pt,0.8997617844155622,0.7201317877207196,0.7201317877207196,,,ok
+Nguyen Method 2 (Unc-Div),8,nguyen_workspace/method2/models\student_round_8\weights\best.pt,0.8690642126307557,0.7173377066502737,0.7173377066502737,,,ok
+Your Pipeline 2 (DFL),0,experiment_workspace/yolov8n/models\student_round_0\weights\best.pt,0.680844034713608,0.5067709742298188,0.5612181562625086,0.5571594550034675,0.4019353114234807,ok
+Your Pipeline 2 (DFL),1,experiment_workspace/yolov8n/models\student_round_1\weights\best.pt,0.7599976311406182,0.5863858368225096,0.5851619465639395,0.6088595759219801,0.5651359879816089,ok
+Your Pipeline 2 (DFL),2,experiment_workspace/yolov8n/models\student_round_2\weights\best.pt,0.7507581253240566,0.5883393595185781,0.5929302713520672,0.5670376549646245,0.6050501522390425,ok
+Your Pipeline 2 (DFL),3,experiment_workspace/yolov8n/models\student_round_3\weights\best.pt,0.7128763916252798,0.5556926502758028,0.5887407493866715,0.5331386268091701,0.5451985746315666,ok
+Your Pipeline 2 (DFL),4,experiment_workspace/yolov8n/models\student_round_4\weights\best.pt,0.7216207261938457,0.568331058657283,0.602284829345666,0.5009060535835358,0.6018022930426472,ok
+Your Pipeline 2 (DFL),5,experiment_workspace/yolov8n/models\student_round_5\weights\best.pt,0.7374854626617111,0.5859019806027999,0.6116084722198234,0.5150724550354261,0.6310250145531497,ok
+Your Pipeline 2 (DFL),6,experiment_workspace/yolov8n/models\student_round_6\weights\best.pt,0.7171982625194513,0.5748809371023696,0.6184288963137051,0.5207396128507337,0.5854743021426705,ok

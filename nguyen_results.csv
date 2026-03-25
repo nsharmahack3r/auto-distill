@@ -1,0 +1,10 @@
+Method,Round,Model_Path,mAP_50,mAP_50_95,mAP50_zebra
+Nguyen Method 2 (Unc-Div),0,nguyen_workspace/method2/models\student_round_0\weights\best.pt,0.7590833703801693,0.5965034571576359,0.5965034571576359
+Nguyen Method 2 (Unc-Div),1,nguyen_workspace/method2/models\student_round_1\weights\best.pt,0.8547820195364254,0.6448826756910723,0.6448826756910723
+Nguyen Method 2 (Unc-Div),2,nguyen_workspace/method2/models\student_round_2\weights\best.pt,0.880424872789704,0.6648123712040633,0.6648123712040633
+Nguyen Method 2 (Unc-Div),3,nguyen_workspace/method2/models\student_round_3\weights\best.pt,0.8709353640120256,0.6661196240448348,0.6661196240448348
+Nguyen Method 2 (Unc-Div),4,nguyen_workspace/method2/models\student_round_4\weights\best.pt,0.9154509550077528,0.700740389432246,0.700740389432246
+Nguyen Method 2 (Unc-Div),5,nguyen_workspace/method2/models\student_round_5\weights\best.pt,0.8991832641231083,0.7064210662926682,0.7064210662926682
+Nguyen Method 2 (Unc-Div),6,nguyen_workspace/method2/models\student_round_6\weights\best.pt,0.89492320182527,0.7006253190503968,0.7006253190503968
+Nguyen Method 2 (Unc-Div),7,nguyen_workspace/method2/models\student_round_7\weights\best.pt,0.8997617844155622,0.7201317877207196,0.7201317877207196
+Nguyen Method 2 (Unc-Div),8,nguyen_workspace/method2/models\student_round_8\weights\best.pt,0.8690642126307557,0.7173377066502737,0.7173377066502737

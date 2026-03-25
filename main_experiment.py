@@ -56,16 +56,16 @@ GD_CONFIG        = "groundingdino/config/GroundingDINO_SwinT_OGC.py"
 GD_WEIGHTS       = "groundingdino_swint_ogc.pth"
 
 CLASS_MAP = {
-    "rhino"  : 0,
-    "zebra"  : 1,
-    "leopard": 2,
+    # "rhino"  : 0,
+    "zebra"  : 0,
+    # "leopard": 2,
 }
 
 # ── Active-learning hyper-parameters ─────────────────────────────────────────
 
 INITIAL_SEED_PCT   = 0.10   # fraction of pool used for cold-start
 ACTIVE_BATCH_PCT   = 0.05   # fraction added per active loop
-MAX_LOOPS          = 6
+MAX_LOOPS          = 8
 COLD_START_EPOCHS  = 10
 ACTIVE_TRAIN_EPOCHS = 20
 
