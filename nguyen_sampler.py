@@ -70,26 +70,49 @@ class _VGGEncoder:
         # Drop final softmax classifier; keep up to the 4096-d ReLU layer
         vgg.classifier = nn.Sequential(*list(vgg.classifier.children())[:-1])
         vgg.eval()
-        self.model = vgg.to(self.device)
+        self.model = vgg.to(self.device).half()  # FP16 for faster Tensor Core execution
 
     @torch.no_grad()
     def encode(self, image_path: str) -> np.ndarray:
         """Return a (4096,) float32 embedding for one image."""
         try:
             img = Image.open(image_path).convert("RGB")
-            tensor = _VGG_TRANSFORM(img).unsqueeze(0).to(self.device)
+            tensor = _VGG_TRANSFORM(img).unsqueeze(0).to(self.device).half()
             feat = self.model(tensor)
-            return feat.squeeze().cpu().numpy().astype(np.float32)
+            return feat.squeeze().cpu().float().numpy().astype(np.float32)
         except Exception as e:
             print(f"  [VGGEncoder] Failed on {image_path}: {e}")
             return np.zeros(4096, dtype=np.float32)
 
-    def encode_batch(self, image_paths: list) -> np.ndarray:
-        """Return (N, 4096) embedding matrix."""
-        return np.stack([
-            self.encode(p)
-            for p in tqdm(image_paths, desc="  VGG-16 embeddings", unit="img")
-        ])
+    @torch.no_grad()
+    def encode_batch(self, image_paths: list, batch_size: int = 32) -> np.ndarray:
+        """Return (N, 4096) embedding matrix using true batched forward passes."""
+        all_embeddings = []
+        for i in tqdm(range(0, len(image_paths), batch_size),
+                      desc="  VGG-16 embeddings", unit="batch"):
+            chunk = image_paths[i : i + batch_size]
+            tensors = []
+            valid_mask = []
+            for p in chunk:
+                try:
+                    img = Image.open(p).convert("RGB")
+                    tensors.append(_VGG_TRANSFORM(img))
+                    valid_mask.append(True)
+                except Exception as e:
+                    print(f"  [VGGEncoder] Failed on {p}: {e}")
+                    tensors.append(torch.zeros(3, 224, 224))
+                    valid_mask.append(False)
+
+            batch_tensor = torch.stack(tensors).to(self.device).half()
+            feats = self.model(batch_tensor).cpu().float().numpy().astype(np.float32)
+
+            for j, valid in enumerate(valid_mask):
+                if valid:
+                    all_embeddings.append(feats[j])
+                else:
+                    all_embeddings.append(np.zeros(4096, dtype=np.float32))
+
+        return np.stack(all_embeddings)
 
     def cleanup(self):
         del self.model
@@ -100,25 +123,31 @@ class _VGGEncoder:
 
 # ── Uncertainty scoring — Eq. 1 ──────────────────────────────────────────────
 
-def _compute_uncertainty(model: YOLO, image_paths: list) -> np.ndarray:
+def _compute_uncertainty(model: YOLO, image_paths: list,
+                         infer_batch: int = 16) -> np.ndarray:
     """
     u(x) = mean_i(1 - s_i(x))   where s_i is the detection score.
     If |D_f(x)| == 0  →  u(x) = 0.5  (model saw nothing; ambiguous).
     Eq. 1, Nguyen & Nguyen (2025).
+
+    Uses batched inference for GPU efficiency.
     """
     scores = []
-    for img_path in tqdm(image_paths, desc="  Uncertainty scores", unit="img"):
+    for i in tqdm(range(0, len(image_paths), infer_batch),
+                  desc="  Uncertainty scores", unit="batch"):
+        chunk = image_paths[i : i + infer_batch]
         try:
-            results = model(img_path, verbose=False, conf=0.1)
-            boxes = results[0].boxes
-            if len(boxes) == 0:
-                scores.append(0.5)
-            else:
-                confs = boxes.conf.cpu().numpy()
-                scores.append(float(np.mean(1.0 - confs)))
+            results = model(chunk, verbose=False, conf=0.1, half=True)
+            for res in results:
+                boxes = res.boxes
+                if len(boxes) == 0:
+                    scores.append(0.5)
+                else:
+                    confs = boxes.conf.cpu().numpy()
+                    scores.append(float(np.mean(1.0 - confs)))
         except Exception as e:
-            print(f"  [Uncertainty] Error on {img_path}: {e}")
-            scores.append(0.5)
+            print(f"  [Uncertainty] Error on batch: {e}")
+            scores.extend([0.5] * len(chunk))
     return np.array(scores, dtype=np.float32)
 
 
@@ -234,20 +263,24 @@ class NguenMethod2Sampler:
 
         alpha = alpha_0
 
+        # Incremental diversity: track cumulative distance sum per image
+        # instead of recomputing all pairwise distances each iteration.
+        # dist_sum[i] = sum of Euclidean distances from image i to all
+        # previously selected images.  diversity = dist_sum / k.
+        dist_sum = np.linalg.norm(
+            embeddings - embeddings[first], axis=1
+        ).astype(np.float64)  # (N,) — distance to first selected image
+
         for k in tqdm(range(1, batch_size), desc="  Greedy selection", unit="step"):
             # Adaptive alpha update — Eq. 6
             n_unlabelled = int(remaining_mask.sum())
             if n_unlabelled > 0:
                 alpha = max(0.0, alpha - batch_size / (2.0 * n_unlabelled))
 
-            sel_embs = embeddings[selected_indices]         # (k, 4096)
-            rem_idx  = np.where(remaining_mask)[0]          # (M,)
-            rem_embs = embeddings[rem_idx]                  # (M, 4096)
+            rem_idx = np.where(remaining_mask)[0]           # (M,)
 
-            # Pairwise Euclidean distances (M, k) → mean diversity per image
-            diffs     = rem_embs[:, np.newaxis, :] - sel_embs[np.newaxis, :, :]
-            dists     = np.linalg.norm(diffs, axis=2)       # (M, k)
-            diversity = dists.mean(axis=1)                  # (M,)
+            # Mean diversity = cumulative distance sum / num selected so far
+            diversity = dist_sum[rem_idx] / k               # (M,)
 
             # Normalise u and v to [0,1] for stable weighting
             u_rem  = u_scores[rem_idx]
@@ -260,6 +293,11 @@ class NguenMethod2Sampler:
 
             selected_indices.append(best_global)
             remaining_mask[best_global] = False
+
+            # Update cumulative distances with the newly selected image
+            dist_sum += np.linalg.norm(
+                embeddings - embeddings[best_global], axis=1
+            )
 
         selected = [image_list[i] for i in selected_indices]
         print(f"[Nguyen Method 2] Selected {len(selected)} images.")

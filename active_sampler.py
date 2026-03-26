@@ -36,19 +36,34 @@ class UncertaintySampler:
         max_conf = float(np.max(boxes.conf.cpu().numpy()))
         return 1.0 - max_conf
 
-    def select_batch(self, image_pool: list, batch_size: int) -> list:
+    def select_batch(self, image_pool: list, batch_size: int,
+                     infer_batch: int = 16) -> list:
         """
         Scan the unlabelled pool and return the top-k most uncertain paths.
+        Uses batched inference for GPU efficiency.
         """
-        print(f"Scanning {len(image_pool)} images (least-confidence sampler)...")
+        print(f"Scanning {len(image_pool)} images "
+              f"(least-confidence sampler, infer_batch={infer_batch})...")
 
-        scores = [
-            (img, self.calculate_uncertainty(img))
-            for img in tqdm(image_pool, unit="img")
-        ]
+        scores = []
+        for i in tqdm(range(0, len(image_pool), infer_batch),
+                      desc="  LC scoring", unit="batch"):
+            chunk = image_pool[i : i + infer_batch]
+            results = self.model.predict(chunk, verbose=False, conf=0.1, half=True)
+            for img, res in zip(chunk, results):
+                boxes = res.boxes
+                if len(boxes) == 0:
+                    scores.append((img, 0.5))
+                else:
+                    max_conf = float(np.max(boxes.conf.cpu().numpy()))
+                    scores.append((img, 1.0 - max_conf))
+
         scores.sort(key=lambda x: x[1], reverse=True)
 
         print(f"  Most uncertain : {scores[0][1]:.4f}")
         print(f"  Cutoff score   : {scores[batch_size - 1][1]:.4f}")
 
         return [path for path, _ in scores[:batch_size]]
+
+    def cleanup(self):
+        del self.model

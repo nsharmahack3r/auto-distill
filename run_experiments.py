@@ -26,6 +26,7 @@ import torch
 import pandas as pd
 
 from ultralytics import YOLO
+from gpu_config import configure_gpu
 from tqdm import tqdm
 
 from novelity_sampler import DFLUncertaintySampler
@@ -45,6 +46,7 @@ import evaluate_experiments
 # ── Paths (same as main_experiment.py) ────────────────────────────────────────
 
 RAW_IMAGE_DIR   = DatasetInfo.imagesPath
+RAW_LABELS_DIR  = DatasetInfo.labelsPath
 EXPERIMENT_ROOT = "experiment_workspace"
 GD_CONFIG       = "groundingdino/config/GroundingDINO_SwinT_OGC.py"
 GD_WEIGHTS      = "groundingdino_swint_ogc.pth"
@@ -193,10 +195,11 @@ def train_model(model_id, run_tag, yaml_path, epochs, round_idx):
         epochs  = epochs,
         imgsz   = 640,
         batch   = batch,
-        workers = 2 if round_idx == 0 else 1,
+        workers = 2,
         project = project,
         name    = run_name,
         verbose = False,
+        amp     = True,
     )
     best_pt = os.path.join(project, run_name, "weights", "best.pt")
 
@@ -208,7 +211,7 @@ def train_model(model_id, run_tag, yaml_path, epochs, round_idx):
 def quick_val(model_path: str) -> tuple[float, float]:
     """Return (mAP50, mAP50-95) for a checkpoint."""
     model   = YOLO(model_path)
-    metrics = model.val(data=VALIDATION_YAML, verbose=False, workers=0)
+    metrics = model.val(data=VALIDATION_YAML, verbose=False, workers=0, half=True)
     result  = (metrics.box.map50, metrics.box.map)
     del model
     force_cleanup()
@@ -309,6 +312,7 @@ def run_pipeline(
         model_weights_path = GD_WEIGHTS,
         class_map          = CLASS_MAP,
         output_folder      = f"{model_root}/train_data",
+        labels_dir         = RAW_LABELS_DIR,
     )
 
     try:
@@ -579,6 +583,7 @@ def main():
     # Set seed for reproducibility across all experiments
     random.seed(args.seed)
     torch.manual_seed(args.seed)
+    configure_gpu()
 
     print(f"\n  Random seed: {args.seed}")
     print(f"  Model      : {args.model}")

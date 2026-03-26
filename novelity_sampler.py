@@ -179,15 +179,37 @@ class DFLUncertaintySampler:
 
     # ── Batch selection ───────────────────────────────────────────────────────
 
-    def select_batch(self, image_list: list, batch_size: int) -> list:
-        """Return the top-k highest-uncertainty image paths."""
-        print(f"Scoring {len(image_list)} images "
-              f"(DFL-variance, model={self._model_type})...")
+    def select_batch(self, image_list: list, batch_size: int,
+                     infer_batch: int = 16) -> list:
+        """Return the top-k highest-uncertainty image paths.
 
-        scores = [
-            (img, self.get_uncertainty_score(img))
-            for img in tqdm(image_list, unit="img")
-        ]
+        Uses batched inference for GPU efficiency — processes `infer_batch`
+        images per forward pass instead of one at a time.
+        """
+        print(f"Scoring {len(image_list)} images "
+              f"(DFL-variance, model={self._model_type}, "
+              f"infer_batch={infer_batch})...")
+
+        scores = []
+        for i in tqdm(range(0, len(image_list), infer_batch),
+                      desc="  DFL scoring", unit="batch"):
+            chunk = image_list[i : i + infer_batch]
+
+            if not self._hook_ok:
+                # Fallback: batch predict then score by confidence
+                results = self.model(chunk, verbose=False, conf=0.1, half=True)
+                for img, res in zip(chunk, results):
+                    boxes = res.boxes
+                    if len(boxes) == 0:
+                        scores.append((img, 0.5))
+                    else:
+                        scores.append((img, 1.0 - float(boxes.conf.cpu().numpy().max())))
+            else:
+                # DFL hook scoring: must run one image at a time because
+                # hooks capture per-batch activations
+                for img in chunk:
+                    scores.append((img, self.get_uncertainty_score(img)))
+
         scores.sort(key=lambda x: x[1], reverse=True)
         return [path for path, _ in scores[:batch_size]]
 
